@@ -3,8 +3,9 @@ package main
 import (
 	"log"
 	"fmt"
+	"net/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 )
 
 type Todo struct {
@@ -16,30 +17,31 @@ type Todo struct {
 func main() {
 	fmt.Println("Hello World")
 
-	app := fiber.New()
+	r := gin.Default()
 
 	todos := []Todo{}
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Status(200).JSON(fiber.Map{"msg": "hello world"})
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"msg": "hello world"})
 	})
 
-	app.Post("/api/todos", func (c *fiber.Ctx) error {
+	r.POST("/api/todos", func (c *gin.Context) {
 		todo := &Todo{}
 
-		if err := c.BodyParser(todo); err != nil {
-			return err
+		if err := c.ShouldBindJSON(todo); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+			return 
 		}
 		
 		if todo.Body == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Todo body is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Todo body is required"})
 		}
 
 		todo.ID = len(todos) + 1
 		todos = append(todos, *todo)
 
-		return c.Status(201).JSON(todo)
+		c.JSON(http.StatusCreated, todo)
 	})
 
-	log.Fatal(app.Listen(":4000"))
+	log.Fatal(r.Run(":4000"))
 }
